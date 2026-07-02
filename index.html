@@ -9,31 +9,47 @@
         h1 { color: #ff4500; font-size: 24px; border-bottom: 2px solid #2d2d2d; padding-bottom: 10px; }
         h3 { color: #ff4500; margin-top: 10px; margin-bottom: 10px; display: inline-block; }
         .container { max-width: 1100px; margin: 0 auto; }
-        input[type="text"] { width: 100%; background-color: #1e1e1e; color: #fff; border: 1px solid #3d3d3d; border-radius: 4px; padding: 12px; box-sizing: border-box; font-family: monospace; font-size: 14px; margin-bottom: 15px; }
+        .input-field { width: 100%; background-color: #1e1e1e; color: #fff; border: 1px solid #3d3d3d; border-radius: 4px; padding: 12px; box-sizing: border-box; font-family: monospace; font-size: 14px; margin-bottom: 15px; }
+        
+        .btn-group-header { display: flex; gap: 10px; }
         button { background-color: #4a148c; color: white; border: none; padding: 12px 25px; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 14px; transition: background 0.2s; }
         button:hover { background-color: #6a1b9a; }
         button:disabled { background-color: #444; color: #888; cursor: not-allowed; }
-        .btn-copy-gen { background-color: #00796b; padding: 6px 12px; font-size: 12px; margin-left: 15px; border-radius: 4px; font-weight: bold; }
+        .btn-copy-gen { background-color: #00796b; padding: 6px 12px; font-size: 12px; border-radius: 4px; font-weight: bold; }
         .btn-copy-gen:hover { background-color: #00897b; }
+        .btn-toggle-sets { background-color: #333; color: #ffa726; border: 1px solid #ffa726; padding: 6px 12px; font-size: 12px; border-radius: 4px; font-weight: bold; }
+        .btn-toggle-sets:hover { background-color: #ffa726; color: #121212; }
+        
         .status { margin-top: 15px; font-style: italic; color: #ffa726; font-weight: 500; min-height: 20px; }
         pre { background-color: #0a0a0a; padding: 18px; border-left: 4px solid #4a148c; border-radius: 4px; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.4; color: #a4c2f4; margin-top: 5px; }
         .checkbox-group { margin-bottom: 15px; display: flex; gap: 20px; font-size: 14px; }
         .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
         .gen-block { background: #1a1a1a; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #2d2d2d; }
         .header-inline { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; }
+
+        /* Pop-up (Modal) Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #1a1a1a; width: 85%; max-width: 900px; height: 80%; border: 2px solid #ffa726; border-radius: 8px; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .modal-title { font-size: 18px; font-weight: bold; color: #ffa726; font-family: monospace; }
+        .modal-body { flex: 1; overflow-y: auto; background: #0a0a0a; border-radius: 4px; padding: 15px; }
+        .modal-body pre { border-left: none; padding: 0; margin: 0; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px; }
+        .btn-modal-copy { background-color: #00796b; color: white; }
+        .btn-modal-close { background-color: #c62828; color: white; }
+        .btn-modal-close:hover { background-color: #e53935; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Smogon Thread Auto-Scraper & Stats 2.0</h1>
-    <p>Enter the Smogon thread URL (automatically scans all pages):</p>
-    
-    <input type="text" id="threadUrl" placeholder="Example: https://www.smogon.com/forums/threads/tounament/">
+    <h1>Smogon Thread Auto-Scraper & Stats</h1>
+    <p>Enter the Smogon thread URL:</p>
+    <input type="text" id="threadUrl" class="input-field" placeholder="Example: https://www.smogon.com/forums/threads/puff-league-i-week-one.3784285/">
     
     <div class="checkbox-group">
-        <label><input type="checkbox" id="chkUsage" checked> Usage</label>
-        <label><input type="checkbox" id="chkLeads" checked> Leads</label>
+        <label><input type="checkbox" id="chkUsage" checked> Usage Table</label>
+        <label><input type="checkbox" id="chkLeads" checked> Leads Table</label>
     </div>
 
     <button id="btnSubmit" onclick="startScraping()">Launch Automatic Analysis</button>
@@ -45,8 +61,25 @@
     </div>
 </div>
 
+<div id="setsModal" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div id="modalTitle" class="modal-title">Detailed Sets Report</div>
+            <button class="btn-modal-close" style="padding: 5px 12px; font-size: 12px;" onclick="closeModal(null)">✕</button>
+        </div>
+        <div class="modal-body">
+            <pre id="modalText"></pre>
+        </div>
+        <div class="modal-footer">
+            <button id="btnModalCopyAction" class="btn-copy-gen btn-modal-copy">📋 Copy This Sets Block</button>
+            <button class="btn-modal-close" style="padding: 6px 15px; font-size: 12px; border-radius: 4px; font-weight: bold;" onclick="closeModal(null)">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const CORS_PROXY = "https://corsproxy.io/?";
+    let activeSetsData = {}; 
 
     function cleanPokemonName(name) {
         if (!name) return "Unknown";
@@ -55,15 +88,32 @@
         return clean;
     }
 
-    // Function to handle clipboard copies per specific generation array
-    function copyGenLinks(linksArray, formatName) {
-        if (!linksArray || linksArray.length === 0) return;
-        const textToCopy = linksArray.join('\n');
+    function openModal(formatName, fIdx) {
+        const modal = document.getElementById('setsModal');
+        const title = document.getElementById('modalTitle');
+        const textContainer = document.getElementById('modalText');
+        const copyBtn = document.getElementById('btnModalCopyAction');
+
+        const targetText = activeSetsData[fIdx] || "No data recorded.";
         
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            alert(`📋 Copied ${linksArray.length} links for format: ${formatName.toUpperCase()}`);
+        title.innerText = `Detailed Sets Report — ${formatName.toUpperCase()}`;
+        textContainer.innerText = targetText;
+        
+        copyBtn.onclick = () => copyToClipboard(targetText, `📋 Sets detailed data copied for ${formatName.toUpperCase()}!`);
+        modal.style.display = "flex";
+    }
+
+    function closeModal(e) {
+        if (!e || e.target === document.getElementById('setsModal') || e.type === 'click') {
+            document.getElementById('setsModal').style.display = "none";
+        }
+    }
+
+    function copyToClipboard(text, message) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert(message);
         }).catch(err => {
-            console.error('Failed to copy links: ', err);
+            console.error('Failed to copy text: ', err);
         });
     }
 
@@ -83,6 +133,7 @@
         btn.disabled = true;
         resultsArea.style.display = "none";
         genOutputs.innerHTML = "";
+        activeSetsData = {};
         
         let allReplayLinks = new Set();
         let currentPage = 1;
@@ -150,17 +201,17 @@
 
                 let fd = formatData[format];
                 fd.totalMatches++;
-                fd.links.push(replayUrl); // Save replay URL under its respective format group
+                fd.links.push(replayUrl); 
 
                 const lines = log.split('\n');
                 let matchTeams = { p1: new Set(), p2: new Set() };
                 let leadsFound = { p1: false, p2: false };
                 let foundStart = false;
+                let activeMonMap = {}; 
 
                 for (let line of lines) {
                     let parts = line.split('|');
                     if (parts.length < 2) continue;
-
                     let cmd = parts[1];
 
                     if (cmd === 'poke') {
@@ -168,15 +219,37 @@
                         let mon = cleanPokemonName(parts[3]);
                         if (mon && (side === 'p1' || side === 'p2')) matchTeams[side].add(mon);
                     }
-
                     if (cmd === 'switch' || cmd === 'drag') {
                         let fullPosition = parts[2].trim(); 
                         let sideToken = fullPosition.substring(0, 2); 
                         let mon = cleanPokemonName(parts[3]);
-                        
                         if (mon && (sideToken === 'p1' || sideToken === 'p2')) {
                             matchTeams[sideToken].add(mon);
                         }
+                    }
+                }
+
+                ['p1', 'p2'].forEach(side => {
+                    matchTeams[side].forEach(mon => {
+                        if (!fd.pokemonData[mon]) {
+                            fd.pokemonData[mon] = { use: 0, wins: 0, moves: {}, teammates: {} };
+                        }
+                    });
+                });
+
+                let trackedMovesPerMatch = {}; 
+
+                for (let line of lines) {
+                    let parts = line.split('|');
+                    if (parts.length < 2) continue;
+                    let cmd = parts[1];
+
+                    if (cmd === 'switch' || cmd === 'drag') {
+                        let fullPosition = parts[2].trim(); 
+                        let sideToken = fullPosition.substring(0, 2); 
+                        let posToken = fullPosition.split(':')[0].trim();
+                        let mon = cleanPokemonName(parts[3]);
+                        activeMonMap[posToken] = mon;
 
                         if (foundStart && !leadsFound[sideToken] && (sideToken === 'p1' || sideToken === 'p2')) {
                             leadsFound[sideToken] = true;
@@ -189,15 +262,50 @@
                     }
 
                     if (cmd === 'start') foundStart = true;
+
+                    if (cmd === 'move') {
+                        let fullPosition = parts[2].trim();
+                        let posToken = fullPosition.split(':')[0].trim();
+                        let sideToken = fullPosition.substring(0, 2);
+                        let moveName = parts[3].trim();
+                        let mon = activeMonMap[posToken];
+
+                        if (mon && fd.pokemonData[mon]) {
+                            if (!trackedMovesPerMatch[mon]) trackedMovesPerMatch[mon] = new Set();
+                            
+                            if (!trackedMovesPerMatch[mon].has(moveName)) {
+                                trackedMovesPerMatch[mon].add(moveName);
+                                if (!fd.pokemonData[mon].moves[moveName]) {
+                                    fd.pokemonData[mon].moves[moveName] = { use: 0, wins: 0 };
+                                }
+                                fd.pokemonData[mon].moves[moveName].use++;
+                                if ((sideToken === 'p1' && winner === playersNames.p1) || (sideToken === 'p2' && winner === playersNames.p2)) {
+                                    fd.pokemonData[mon].moves[moveName].wins++;
+                                }
+                            }
+                        }
+                    }
                 }
 
                 ['p1', 'p2'].forEach(side => {
-                    matchTeams[side].forEach(mon => {
-                        if (!fd.pokemonData[mon]) fd.pokemonData[mon] = { use: 0, wins: 0 };
+                    let currentTeam = Array.from(matchTeams[side]);
+                    currentTeam.forEach(mon => {
+                        if (!fd.pokemonData[mon]) return;
                         fd.pokemonData[mon].use += 1;
                         if ((side === 'p1' && winner === playersNames.p1) || (side === 'p2' && winner === playersNames.p2)) {
                             fd.pokemonData[mon].wins += 1;
                         }
+
+                        currentTeam.forEach(mate => {
+                            if (mate === mon) return;
+                            if (!fd.pokemonData[mon].teammates[mate]) {
+                                fd.pokemonData[mon].teammates[mate] = { use: 0, wins: 0 };
+                            }
+                            fd.pokemonData[mon].teammates[mate].use++;
+                            if ((side === 'p1' && winner === playersNames.p1) || (side === 'p2' && winner === playersNames.p2)) {
+                                fd.pokemonData[mon].teammates[mate].wins++;
+                            }
+                        });
                     });
                 });
 
@@ -206,7 +314,7 @@
             }
         }
 
-        statusDiv.innerText = ` Analysis complete! ${linksArray.length} replays sorted.`;
+        statusDiv.innerText = `✅ Analysis complete! ${linksArray.length} replays sorted.`;
         btn.disabled = false;
 
         const sortedFormats = Object.keys(formatData).sort((a, b) => {
@@ -214,19 +322,17 @@
             const matchB = b.match(/gen(\d+)/i);
             const numA = matchA ? parseInt(matchA[1]) : 0;
             const numB = matchB ? parseInt(matchB[1]) : 0;
-            
             if (numB !== numA) return numB - numA; 
             return a.localeCompare(b); 
         });
 
-        sortedFormats.forEach(format => {
+        sortedFormats.forEach((format, fIdx) => {
             let fd = formatData[format];
             let totalMatches = fd.totalMatches;
 
             let genBlock = document.createElement('div');
             genBlock.className = 'gen-block';
             
-            // Inline header wrapper to place heading and button next to each other
             let headerWrapper = document.createElement('div');
             headerWrapper.className = 'header-inline';
             
@@ -234,32 +340,40 @@
             title.innerText = `Format: ${format.toUpperCase()} (${totalMatches} matches analyzed)`;
             headerWrapper.appendChild(title);
 
-            // New copy button mapped strictly to this generation's gathered replays list
+            let btnGroup = document.createElement('div');
+            btnGroup.className = 'btn-group-header';
+
+            let toggleSetsBtn = document.createElement('button');
+            toggleSetsBtn.className = 'btn-toggle-sets';
+            toggleSetsBtn.innerText = `🔍 Open Detailed Sets Pop-up`;
+            toggleSetsBtn.onclick = () => openModal(format, fIdx);
+            btnGroup.appendChild(toggleSetsBtn);
+
             let copyBtn = document.createElement('button');
             copyBtn.className = 'btn-copy-gen';
-            copyBtn.innerText = `📋 Copy ${format.toUpperCase()} Replays`;
-            copyBtn.onclick = () => copyGenLinks(fd.links, format);
-            headerWrapper.appendChild(copyBtn);
+            copyBtn.innerText = `📋 Copy Replays Links`;
+            btnGroup.appendChild(copyBtn);
 
+            headerWrapper.appendChild(btnGroup);
             genBlock.appendChild(headerWrapper);
 
-            let textOutput = "";
+            let textTableOutput = "";
+
+            let sortedPokemon = Object.keys(fd.pokemonData).map(m => ({
+                name: m, raw: fd.pokemonData[m],
+                use: fd.pokemonData[m].use,
+                uPct: (fd.pokemonData[m].use / (totalMatches * 2)) * 100,
+                wPct: (fd.pokemonData[m].use > 0 ? (fd.pokemonData[m].wins / fd.pokemonData[m].use) * 100 : 0)
+            })).sort((a,b) => b.use - a.use || b.wPct - a.wPct || a.name.localeCompare(b.name));
 
             if (document.getElementById('chkUsage').checked && totalMatches > 0) {
-                let sorted = Object.keys(fd.pokemonData).map(m => ({
-                    name: m, use: fd.pokemonData[m].use,
-                    uPct: (fd.pokemonData[m].use / (totalMatches * 2)) * 100,
-                    wPct: (fd.pokemonData[m].wins / fd.pokemonData[m].use) * 100
-                })).sort((a,b) => b.use - a.use || b.wPct - a.wPct || a.name.localeCompare(b.name));
-
-                textOutput += `Usage:\n`;
-                textOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
-                textOutput += `| Rank | Pokemon            | Use  | Usage % | Win %   |\n`;
-                textOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
-                sorted.forEach((s, idx) => {
-                    textOutput += `| ${String(idx+1).padEnd(4)} | ${s.name.padEnd(18)} | ${String(s.use).padEnd(4)} | ${(s.uPct.toFixed(2)+'%').padEnd(7)} | ${(s.wPct.toFixed(2)+'%').padEnd(7)} |\n`;
+                textTableOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
+                textTableOutput += `| Rank | Pokemon            | Use  | Usage % | Win %   |\n`;
+                textTableOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
+                sortedPokemon.forEach((s, idx) => {
+                    textTableOutput += `| ${String(idx+1).padEnd(4)} | ${s.name.padEnd(18)} | ${String(s.use).padEnd(4)} | ${(s.uPct.toFixed(2)+'%').padEnd(7)} | ${(s.wPct.toFixed(2)+'%').padEnd(7)} |\n`;
                 });
-                textOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n\n`;
+                textTableOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n\n`;
             }
 
             if (document.getElementById('chkLeads').checked && Object.keys(fd.leadData).length > 0) {
@@ -269,19 +383,76 @@
                     wPct: (fd.leadData[m].wins / fd.leadData[m].use) * 100
                 })).sort((a,b) => b.use - a.use || b.wPct - a.wPct);
 
-                textOutput += `Leads:\n`;
-                textOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
-                textOutput += `| Rank | Pokemon            | Use  | Usage % | Win %   |\n`;
-                textOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
+                textTableOutput += `Leads:\n`;
+                textTableOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
+                textTableOutput += `| Rank | Pokemon            | Use  | Usage % | Win %   |\n`;
+                textTableOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
                 sortedLeads.forEach((s, idx) => {
-                    textOutput += `| ${String(idx+1).padEnd(4)} | ${s.name.padEnd(18)} | ${String(s.use).padEnd(4)} | ${(s.uPct.toFixed(2)+'%').padEnd(7)} | ${(s.wPct.toFixed(2)+'%').padEnd(7)} |\n`;
+                    textTableOutput += `| ${String(idx+1).padEnd(4)} | ${s.name.padEnd(18)} | ${String(s.use).padEnd(4)} | ${(s.uPct.toFixed(2)+'%').padEnd(7)} | ${(s.wPct.toFixed(2)+'%').padEnd(7)} |\n`;
                 });
-                textOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n`;
+                textTableOutput += `+ ---- + ------------------ + ---- + ------- + ------- +\n\n`;
             }
 
             let pre = document.createElement('pre');
-            pre.innerText = textOutput || "No standard text logs compiled.";
+            pre.innerText = textTableOutput || "No tables requested.";
             genBlock.appendChild(pre);
+
+            // --- EMBEDDED COMPLETE DETAILED TEXT BUILDER ---
+            let hiddenTextDetailedOutput = "";
+
+            sortedPokemon.forEach((s, pIdx) => {
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n`;
+                hiddenTextDetailedOutput += `| Rank | Pokemon                 | Use  | Usage % |  Win %  |\n`;
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n`;
+                hiddenTextDetailedOutput += `| ${String(pIdx+1).padEnd(4)} | [${s.name.padEnd(21)}] | ${String(s.use).padEnd(4)} | ${(s.uPct.toFixed(2)+'%').padEnd(7)} | ${(s.wPct.toFixed(2)+'%').padEnd(7)} |\n`;
+                
+                // Moves Sub-table
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n`;
+                hiddenTextDetailedOutput += `| Rank | Moves                   | Use  | Usage % |  Win %  |\n`;
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n`;
+                
+                let sortedMoves = Object.entries(s.raw.moves)
+                    .sort((a,b) => b[1].use - a[1].use || (b[1].wins/b[1].use) - (a[1].wins/a[1].use));
+                
+                if (sortedMoves.length > 0) {
+                    sortedMoves.forEach(([move, metrics], mIdx) => {
+                        let mPct = (metrics.use / s.use) * 100;
+                        let mWinPct = (metrics.wins / metrics.use) * 100;
+                        hiddenTextDetailedOutput += `| ${String(mIdx+1).padEnd(4)} | ${move.padEnd(23)} | ${String(metrics.use).padEnd(4)} | ${(mPct.toFixed(2)+'%').padEnd(7)} | ${(mWinPct.toFixed(2)+'%').padEnd(7)} |\n`;
+                    });
+                } else {
+                    hiddenTextDetailedOutput += `| -    | No moves registered     | 0    | 0.00%   | 0.00%   |\n`;
+                }
+
+                // Teammates Sub-table
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n`;
+                hiddenTextDetailedOutput += `| Rank | Teammates               | Use  | Usage % |  Win %  |\n`;
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n`;
+                
+                let sortedMates = Object.entries(s.raw.teammates)
+                    .sort((a,b) => b[1].use - a[1].use || (b[1].wins/b[1].use) - (a[1].wins/a[1].use));
+                
+                if (sortedMates.length > 0) {
+                    sortedMates.forEach(([mate, metrics], tIdx) => {
+                        let tPct = (metrics.use / s.use) * 100;
+                        let tWinPct = (metrics.wins / metrics.use) * 100;
+                        hiddenTextDetailedOutput += `| ${String(tIdx+1).padEnd(4)} | ${mate.padEnd(23)} | ${String(metrics.use).padEnd(4)} | ${(tPct.toFixed(2)+'%').padEnd(7)} | ${(tWinPct.toFixed(2)+'%').padEnd(7)} |\n`;
+                    });
+                } else {
+                    hiddenTextDetailedOutput += `| -    | No teammates registered | 0    | 0.00%   | 0.00%   |\n`;
+                }
+                hiddenTextDetailedOutput += `+ ---- + ----------------------- + ---- + ------- + ------- +\n\n`;
+            });
+
+            activeSetsData[fIdx] = hiddenTextDetailedOutput;
+
+            // --- REPLAYS LINKS EXTRACTION ---
+            let linksBlockText = "";
+            fd.links.forEach(link => { linksBlockText += `${link}\n`; });
+
+            // The main button now strictly configures and copies ONLY the raw replays list
+            copyBtn.onclick = () => copyToClipboard(linksBlockText, `📋 Raw replays links copied to clipboard for ${format.toUpperCase()}!`);
+
             genOutputs.appendChild(genBlock);
         });
 
